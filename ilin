@@ -1,0 +1,140 @@
+import random
+from datetime import datetime, timedelta
+
+# Database mockup
+flights = [
+    {
+        "flight_id": 1,
+        "route": "Moscow-Paris",
+        "departure": datetime(2024, 12, 25, 14, 30),
+        "arrival": datetime(2024, 12, 25, 18, 0),
+        "seats": 100,
+        "price": 200.0,
+    },
+    {
+        "flight_id": 2,
+        "route": "Moscow-London",
+        "departure": datetime(2024, 12, 25, 10, 0),
+        "arrival": datetime(2024, 12, 25, 12, 30),
+        "seats": 150,
+        "price": 180.0,
+    },
+]
+
+bookings = []  # To store bookings
+
+# Dynamic pricing function
+def calculate_price(base_price, seats_left, total_seats, days_to_departure):
+    demand_factor = (total_seats - seats_left) / total_seats
+    time_factor = max(1, (30 - days_to_departure) / 30)  # Higher closer to departure
+    new_price = base_price * (1 + 0.5 * demand_factor) * time_factor
+    return round(new_price, 2)
+
+# Search flights
+def search_flights(route, date):
+    results = []
+    for flight in flights:
+        if flight["route"] == route and flight["departure"].date() == date:
+            seats_left = flight["seats"]
+            total_seats = 100  # Assume each flight has 100 seats originally
+            days_to_departure = max(1, (flight["departure"] - datetime.now()).days)
+            flight["price"] = calculate_price(flight["price"], seats_left, total_seats, days_to_departure)
+            results.append(flight)
+    return results
+
+# Book a flight
+def book_flight(flight_id, customer_name):
+    for flight in flights:
+        if flight["flight_id"] == flight_id and flight["seats"] > 0:
+            flight["seats"] -= 1
+            booking = {
+                "booking_id": len(bookings) + 1,
+                "flight_id": flight_id,
+                "customer_name": customer_name,
+                "price": flight["price"],
+                "booking_date": datetime.now(),
+            }
+            bookings.append(booking)
+            return booking
+    return None
+
+# Cancel a booking
+def cancel_booking(booking_id):
+    for booking in bookings:
+        if booking["booking_id"] == booking_id:
+            for flight in flights:
+                if flight["flight_id"] == booking["flight_id"]:
+                    flight["seats"] += 1
+            bookings.remove(booking)
+            return True
+    return False
+
+# View all bookings
+def view_bookings():
+    if not bookings:
+        print("No bookings found.")
+        return
+
+    print("All Bookings:")
+    for booking in bookings:
+        print(f"Booking ID: {booking['booking_id']}, Flight ID: {booking['flight_id']}, Customer: {booking['customer_name']}, Price: ${booking['price']}, Date: {booking['booking_date']}")
+
+# Main simulation
+def simulate_booking():
+    while True:
+        print("\nWelcome to the Flight Booking System!")
+        print("1. Search Flights")
+        print("2. Book a Flight")
+        print("3. Cancel a Booking")
+        print("4. View Bookings")
+        print("5. Exit")
+
+        choice = input("Enter your choice: ")
+
+        if choice == "1":
+            route = input("Enter route (e.g., Moscow-Paris): ")
+            date_str = input("Enter departure date (YYYY-MM-DD): ")
+            date = datetime.strptime(date_str, "%Y-%m-%d").date()
+
+            print("Searching for flights...")
+            available_flights = search_flights(route, date)
+
+            if not available_flights:
+                print("No flights available for this route and date.")
+            else:
+                print("Available flights:")
+                for flight in available_flights:
+                    print(
+                        f"Flight ID: {flight['flight_id']}, Departure: {flight['departure']}, Price: ${flight['price']}, Seats Left: {flight['seats']}"
+                    )
+
+        elif choice == "2":
+            flight_id = int(input("Enter the Flight ID to book: "))
+            customer_name = input("Enter your name: ")
+
+            booking = book_flight(flight_id, customer_name)
+            if booking:
+                print(f"Booking successful! Booking ID: {booking['booking_id']}, Price: ${booking['price']}\n")
+            else:
+                print("Booking failed. Flight might be full or invalid ID.\n")
+
+        elif choice == "3":
+            booking_id = int(input("Enter the Booking ID to cancel: "))
+            if cancel_booking(booking_id):
+                print("Booking cancelled successfully.\n")
+            else:
+                print("Cancellation failed. Invalid Booking ID.\n")
+
+        elif choice == "4":
+            view_bookings()
+
+        elif choice == "5":
+            print("Exiting the system. Goodbye!")
+            break
+
+        else:
+            print("Invalid choice. Please try again.")
+
+# Run the simulation
+if __name__ == "__main__":
+    simulate_booking()
